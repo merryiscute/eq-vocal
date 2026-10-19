@@ -1,6 +1,7 @@
 import { analyze, ltasDistanceDb } from './analysis.js';
 import { diagnose, suggestedEq } from './rules.js';
-import { applyMoves, flatBands, responseDb } from './eq.js';
+import { applyMoves, flatBands, responseDb, isPass } from './eq.js';
+import { diagnoseEq, parsePreset, CAUSE_LABEL } from './eqdiag.js';
 import { EXERCISES, SOURCES, DISCLAIMER } from './knowledge.js';
 import * as audio from './audio.js';
 
@@ -37,6 +38,7 @@ async function loadTake(name, take) {
   const metrics = analyze(take.samples, take.sampleRate);
   state.takes[name] = { ...take, metrics };
   $('[data-action="play-raw"]', takeEl(name)).disabled = false;
+  if (name === 'main') ['#btn-play-raw', '#btn-play-eq'].forEach((id) => { $(id).disabled = false; });
   setStatus(name, `${fmt(metrics.input.durationSec)}초 · 최대 ${fmt(metrics.input.peakDb)} dBFS`);
   refresh(name === 'main');
 }
@@ -92,13 +94,11 @@ function refresh(saveHistory) {
   const pinch = state.takes.pinch && main.metrics.ltas
     ? ltasDistanceDb(main.metrics.ltas, state.takes.pinch.metrics.ltas)
     : null;
+  state.pinch = pinch;
   state.result = diagnose(main.metrics, { pinch });
   renderResult();
-  $('#step-eq').hidden = !state.result.usable;
-  if (state.result.usable) {
-    drawEq();
-    if (saveHistory) addHistory(main.metrics);
-  }
+  drawEq();
+  if (state.result.usable && saveHistory) addHistory(main.metrics);
 }
 
 const SEVERITY = { ok: '좋음', info: '참고', warn: '연습 필요', block: '다시 녹음' };
@@ -158,7 +158,6 @@ const css = (name) => getComputedStyle(document.documentElement).getPropertyValu
 
 function drawEq() {
   const main = state.takes.main;
-  if (!main) return;
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   canvas.width = Math.round(rect.width * dpr);
@@ -166,7 +165,7 @@ function drawEq() {
   g2d.setTransform(dpr, 0, 0, dpr, 0, 0);
   const w = rect.width;
   const h = rect.height;
-  const sr = main.sampleRate;
+  const sr = main?.sampleRate ?? 48000;
   g2d.clearRect(0, 0, w, h);
 
   // 2-4 kHz ring band
@@ -190,20 +189,22 @@ function drawEq() {
   }
 
   // LTAS background (top 60 dB, own scale), with the current EQ applied so you see its effect
-  const { binHz, db } = main.metrics.ltas;
-  const maxDb = Math.max(...db.slice(1));
-  g2d.beginPath();
-  g2d.moveTo(0, h);
-  for (let px = 0; px <= w; px += 2) {
-    const f = xToF(px, w);
-    const k = Math.min(db.length - 1, Math.round(f / binHz));
-    const v = Math.max(-60, db[k] - maxDb + responseDb(state.bands, f, sr));
-    g2d.lineTo(px, h - ((v + 60) / 60) * (h - 16));
+  if (main) {
+    const { binHz, db } = main.metrics.ltas;
+    const maxDb = Math.max(...db.slice(1));
+    g2d.beginPath();
+    g2d.moveTo(0, h);
+    for (let px = 0; px <= w; px += 2) {
+      const f = xToF(px, w);
+      const k = Math.min(db.length - 1, Math.round(f / binHz));
+      const v = Math.max(-60, db[k] - maxDb + responseDb(state.bands, f, sr));
+      g2d.lineTo(px, h - ((v + 60) / 60) * (h - 16));
+    }
+    g2d.lineTo(w, h);
+    g2d.closePath();
+    g2d.fillStyle = css('--ltas');
+    g2d.fill();
   }
-  g2d.lineTo(w, h);
-  g2d.closePath();
-  g2d.fillStyle = css('--ltas');
-  g2d.fill();
 
   // EQ curve
   g2d.strokeStyle = css('--curve');
@@ -218,7 +219,7 @@ function drawEq() {
   // band handles
   state.bands.forEach((b, i) => {
     const x = fToX(b.freq, w);
-    const y = gToY(b.gain, h);
+    const y = gToY(isPass(b) ? 0 : b.gain, h);
     g2d.beginPath();
     g2d.arc(x, y, i === state.selected ? 8 : 6, 0, Math.PI * 2);
     g2d.fillStyle = i === state.selected ? css('--curve') : css('--card');
@@ -231,24 +232,28 @@ function drawEq() {
     g2d.fillText(String(i + 1), x - 3, y + 3.5);
   });
   syncControls();
+  renderEqDiagnosis();
 }
 
-const BAND_NAMES = { lowshelf: '로우 셸프', peaking: '피킹', highshelf: '하이 셸프' };
+const BAND_NAMES = { lowshelf: '로우 셸프', peaking: '피킹', highshelf: '하이 셸프', highpass: '하이패스', lowpass: '로우패스' };
 const freqToSlider = (f) => Math.round((Math.log(f / 20) / Math.log(16000 / 20)) * 1000);
 const sliderToFreq = (v) => 20 * (16000 / 20) ** (v / 1000);
 
 function syncControls() {
+  state.selected = Math.min(state.selected, state.bands.length - 1);
   const b = state.bands[state.selected];
+  const hasQ = b.type === 'peaking' || isPass(b);
   $('#band-tabs').innerHTML = state.bands
     .map((x, i) => `<button data-band="${i}" class="${i === state.selected ? 'active' : ''}">${i + 1}. ${BAND_NAMES[x.type]}</button>`)
     .join('');
   $('#ctl-freq').value = freqToSlider(b.freq);
   $('#ctl-gain').value = b.gain;
   $('#ctl-q').value = b.q;
-  $('#ctl-q').disabled = b.type !== 'peaking';
+  $('#ctl-q').disabled = !hasQ;
+  $('#ctl-gain').disabled = isPass(b);
   $('#out-freq').textContent = `${b.freq >= 1000 ? (b.freq / 1000).toFixed(2) + 'k' : Math.round(b.freq)} Hz`;
-  $('#out-gain').textContent = `${b.gain > 0 ? '+' : ''}${b.gain.toFixed(1)} dB`;
-  $('#out-q').textContent = b.type === 'peaking' ? b.q.toFixed(1) : '—';
+  $('#out-gain').textContent = isPass(b) ? '—' : `${b.gain > 0 ? '+' : ''}${b.gain.toFixed(1)} dB`;
+  $('#out-q').textContent = hasQ ? b.q.toFixed(2) : '—';
 }
 
 function bandsChanged() {
@@ -272,7 +277,7 @@ canvas.addEventListener('pointerdown', (e) => {
   let best = -1;
   let bestD = 24;
   state.bands.forEach((b, i) => {
-    const d = Math.hypot(fToX(b.freq, r.width) - x, gToY(b.gain, r.height) - y);
+    const d = Math.hypot(fToX(b.freq, r.width) - x, gToY(isPass(b) ? 0 : b.gain, r.height) - y);
     if (d < bestD) { bestD = d; best = i; }
   });
   if (best < 0) return;
@@ -286,13 +291,13 @@ canvas.addEventListener('pointermove', (e) => {
   const r = canvas.getBoundingClientRect();
   const b = state.bands[state.selected];
   b.freq = Math.min(16000, Math.max(20, xToF(e.clientX - r.left, r.width)));
-  b.gain = Math.round(yToG(e.clientY - r.top, r.height) * 2) / 2;
+  if (!isPass(b)) b.gain = Math.round(yToG(e.clientY - r.top, r.height) * 2) / 2;
   bandsChanged();
 });
 canvas.addEventListener('pointerup', () => { dragging = false; });
 canvas.addEventListener('wheel', (e) => {
   const b = state.bands[state.selected];
-  if (b.type !== 'peaking') return;
+  if (b.type !== 'peaking' && !isPass(b)) return;
   e.preventDefault();
   b.q = Math.min(8, Math.max(0.3, b.q * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
   bandsChanged();
@@ -310,7 +315,55 @@ $('#btn-flat').addEventListener('click', () => { state.bands = flatBands(); band
 $('#btn-play-raw').addEventListener('click', () => state.takes.main && audio.play(state.takes.main, null));
 $('#btn-play-eq').addEventListener('click', () => state.takes.main && audio.play(state.takes.main, state.bands));
 $('#btn-stop').addEventListener('click', () => audio.stop());
-window.addEventListener('resize', () => { if (!$('#step-eq').hidden) drawEq(); });
+window.addEventListener('resize', drawEq);
+
+$('#btn-preset').addEventListener('click', () => {
+  const { bands, errors } = parsePreset($('#preset-text').value);
+  const msg = $('#preset-msg');
+  if (!bands.length) {
+    msg.className = 'note err';
+    msg.textContent = errors.length ? `불러온 밴드 없음 — ${errors[0].line}행: ${errors[0].reason}` : '입력이 비어 있음';
+    return;
+  }
+  state.bands = bands;
+  state.selected = 0;
+  bandsChanged();
+  msg.className = errors.length ? 'note err' : 'note';
+  msg.textContent = `${bands.length}개 밴드 불러옴`
+    + (errors.length ? ` · 건너뜀: ${errors.map((e) => `${e.line}행(${e.reason})`).join(', ')}` : '');
+});
+
+// ---------- Step 3b: EQ -> vocal diagnosis ----------
+
+function renderEqDiagnosis() {
+  const main = state.takes.main;
+  const metrics = main && state.result?.usable ? main.metrics : null;
+  const r = diagnoseEq(state.bands, { sampleRate: main?.sampleRate ?? 48000, metrics, pinch: state.pinch ?? null });
+
+  const SCALE = 12;
+  $('#eq-zones').innerHTML = r.zones.map((z) => {
+    const pct = (Math.min(SCALE, Math.abs(z.db)) / SCALE) * 50;
+    const dir = z.db >= 0 ? 'boost' : 'cut';
+    const pos = dir === 'boost' ? `left:50%;width:${pct}%` : `left:${50 - pct}%;width:${pct}%`;
+    const small = Math.abs(z.db) < 2 ? ' small' : '';
+    return `<div class="zone"><span class="name">${esc(z.name)}</span>
+      <span class="track"><span class="bar ${dir}${small}" style="${pos}"></span></span>
+      <span class="val">${z.db > 0 ? '+' : ''}${fmt(z.db)} dB</span></div>`;
+  }).join('');
+
+  const notes = r.notes.map((n) => `<div class="eq-note ${n.severity}">${esc(n.text)}</div>`).join('');
+  const cards = r.findings.map((f) => {
+    const base = renderFinding({ ...f, provisional: false });
+    const cause = `<span class="badge tag">원인 영역: ${CAUSE_LABEL[f.cause]}</span>`;
+    const check = f.check.text
+      ? `<div class="check ${f.check.agree === true ? 'agree' : f.check.agree === false ? 'disagree' : ''}">${
+          f.check.agree === true ? '✔ 귀와 측정 일치 — ' : f.check.agree === false ? '△ 귀와 측정 불일치 — ' : ''
+        }${esc(f.check.text)}</div>`
+      : '';
+    return base.replace('</h3>', `${cause}</h3>`).replace(/<\/div>$/, `${check}</div>`);
+  }).join('');
+  $('#eq-diagnosis').innerHTML = notes + cards;
+}
 
 // ---------- Step 4: history (per-browser convenience only) ----------
 
@@ -360,5 +413,6 @@ function renderHistory(list = loadHistory()) {
 }
 
 renderHistory();
+drawEq();
 const ds = SOURCES[DISCLAIMER.source];
 $('#disclaimer').innerHTML = `${esc(DISCLAIMER.text)} <span title="${esc(ds.cite)}">(${esc(ds.label)})</span>`;

@@ -29,6 +29,13 @@ export function coefficients({ type, freq, gain, q }, sampleRate) {
       a: [1 + alpha / A, -2 * cos, 1 - alpha / A],
     };
   }
+  if (type === 'highpass' || type === 'lowpass') {
+    // 12 dB/oct; gain is ignored, as in BiquadFilterNode.
+    const alpha = sin / (2 * q);
+    const hp = type === 'highpass';
+    const b0 = hp ? (1 + cos) / 2 : (1 - cos) / 2;
+    return { b: [b0, hp ? -(1 + cos) : 1 - cos, b0], a: [1 + alpha, -2 * cos, 1 - alpha] };
+  }
   const alpha = (sin / 2) * Math.SQRT2; // shelf slope S = 1
   const k = 2 * Math.sqrt(A) * alpha;
   if (type === 'lowshelf') {
@@ -54,9 +61,14 @@ function biquadDb({ b, a }, f, sampleRate) {
   return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
 }
 
+export const isPass = (band) => band.type === 'highpass' || band.type === 'lowpass';
+
 /** Total EQ gain in dB at frequency f. */
 export function responseDb(bands, f, sampleRate) {
-  return bands.reduce((sum, band) => sum + (band.gain ? biquadDb(coefficients(band, sampleRate), f, sampleRate) : 0), 0);
+  return bands.reduce(
+    (sum, band) => sum + (band.gain || isPass(band) ? biquadDb(coefficients(band, sampleRate), f, sampleRate) : 0),
+    0,
+  );
 }
 
 /** Series chain of BiquadFilterNodes. Connect input -> ... -> output. */
