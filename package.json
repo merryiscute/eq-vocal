@@ -1,0 +1,12 @@
+{
+  "name": "eq-vocal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Parametric EQ + voice science vocal practice coach (browser, no build step)",
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT"
+}

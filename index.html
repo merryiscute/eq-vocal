@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EQ Vocal Coach</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%23e8663d%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>EQ Vocal Coach</h1>
+    <p class="sub">스펙트럼으로 발성을 진단하고, EQ로 목표 소리를 먼저 들어 본 뒤, 연습으로 그 소리를 만든다.</p>
+  </header>
+
+  <main>
+    <section class="card" id="step-record">
+      <h2><span class="num">1</span> "아—" 5초 녹음</h2>
+      <ul class="tips">
+        <li>편한 음 하나로, 비브라토 없이 곧게 "아—"를 유지하세요.</li>
+        <li>매번 <b>같은 마이크 · 같은 거리(약 20 cm) · 같은 음</b>으로 재야 기록끼리 비교가 됩니다.</li>
+        <li>이어폰 마이크보다 휴대폰/노트북 내장 마이크가 차라리 일정합니다.</li>
+      </ul>
+      <div class="takes">
+        <div class="take" data-take="main">
+          <div class="take-head">기본 녹음 <span class="req">필수</span></div>
+          <div class="row">
+            <button class="primary" data-action="record">● 녹음 (6초)</button>
+            <label class="file">파일 <input type="file" accept="audio/*" data-action="file"></label>
+            <button data-action="play-raw" disabled>▶ 듣기</button>
+          </div>
+          <div class="meter"><div class="meter-fill"></div></div>
+          <div class="status">아직 녹음 없음</div>
+        </div>
+        <div class="take" data-take="pinch">
+          <div class="take-head">코 막고 녹음 <span class="opt">선택 · 콧소리 확인</span></div>
+          <div class="row">
+            <button data-action="record">● 녹음 (6초)</button>
+            <label class="file">파일 <input type="file" accept="audio/*" data-action="file"></label>
+            <button data-action="play-raw" disabled>▶ 듣기</button>
+          </div>
+          <div class="meter"><div class="meter-fill"></div></div>
+          <div class="status">같은 음으로, 손으로 코를 막고 "아—"</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="step-result" hidden>
+      <h2><span class="num">2</span> 진단</h2>
+      <div class="metrics" id="metrics"></div>
+      <div id="findings"></div>
+    </section>
+
+    <section class="card" id="step-eq" hidden>
+      <h2><span class="num">3</span> 파라메트릭 EQ — 목표 소리 미리 듣기</h2>
+      <p class="note">EQ는 녹음을 바꿀 뿐 성대를 바꾸지 못합니다. 여기서는 <b>"연습하면 이런 소리가 난다"는 청각 목표</b>를 귀에 익히는 용도입니다. 회색은 내 목소리의 평균 스펙트럼, 주황 띠는 2–4 kHz 울림 대역입니다.</p>
+      <div class="canvas-wrap"><canvas id="eq-canvas"></canvas></div>
+      <div class="band-tabs" id="band-tabs"></div>
+      <div class="band-controls" id="band-controls">
+        <label>주파수 <input type="range" id="ctl-freq" min="0" max="1000" step="1"><output id="out-freq"></output></label>
+        <label>게인 <input type="range" id="ctl-gain" min="-15" max="15" step="0.5"><output id="out-gain"></output></label>
+        <label>Q <input type="range" id="ctl-q" min="0.3" max="8" step="0.1"><output id="out-q"></output></label>
+      </div>
+      <div class="row">
+        <button class="primary" id="btn-suggest">제안 EQ 적용</button>
+        <button id="btn-flat">평탄화</button>
+        <span class="spacer"></span>
+        <button id="btn-play-raw">▶ 원본</button>
+        <button id="btn-play-eq">▶ EQ 적용</button>
+        <button id="btn-stop">■</button>
+      </div>
+      <p class="hint">점을 드래그해 주파수·게인을, 마우스 휠로 Q를 바꿉니다. 재생 중 변경도 바로 들립니다.</p>
+    </section>
+
+    <section class="card" id="step-history">
+      <h2><span class="num">4</span> 내 기록 추이</h2>
+      <p class="note">마이크·방이 바뀌면 절대값은 달라집니다. 그래서 이 앱은 남과의 비교보다 <b>내 첫 기록 대비 변화</b>를 봅니다.</p>
+      <div id="history"></div>
+    </section>
+
+    <footer class="card disclaimer" id="disclaimer"></footer>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
