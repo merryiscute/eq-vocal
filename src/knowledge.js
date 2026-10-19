@@ -2,41 +2,64 @@
 // and how strong the evidence is. `basis` is shown to the user verbatim:
 //   'research'  - backed by the cited paper/manual
 //   'heuristic' - common voice-teaching / mixing practice, not validated here
+// SOURCES[].verified records the 2026-10 web check of each citation:
+//   'confirmed' - bibliographic details matched a primary/indexing record
+//   'partial'   - paper exists and content matches; some details (pages, authors) unconfirmed
 
 export const SOURCES = {
   boersma1993: {
     label: 'Boersma (1993) — 자기상관 기반 F0·HNR 측정',
     cite: 'Boersma, P. (1993). Accurate short-term analysis of the fundamental frequency and the harmonics-to-noise ratio of a sampled sound. Proc. Institute of Phonetic Sciences, Univ. of Amsterdam, 17, 97–110.',
+    url: 'https://www.fon.hum.uva.nl/archive/1993/Proc17Boersma.pdf',
+    verified: 'confirmed',
   },
   praatHarmonicity: {
     label: 'Praat 매뉴얼 "Harmonicity"',
     cite: 'Boersma, P. & Weenink, D. Praat manual: Harmonicity.',
     url: 'https://www.fon.hum.uva.nl/praat/manual/Harmonicity.html',
+    verified: 'confirmed',
+    note: '"건강한 화자의 지속 [a]·[i]는 약 20 dB, [u]는 약 40 dB" — 매뉴얼 문구 확인.',
   },
   omori1996: {
     label: 'Omori et al. (1996) — Singing Power Ratio',
-    cite: 'Omori, K., Kacker, A., Carroll, L. M., Riley, W. D., & Blaugrund, S. M. (1996). Singing power ratio: quantitative evaluation of singing voice quality in singers and nonsingers. Journal of Voice, 10(3), 228–235.',
+    cite: 'Omori, K., et al. (1996). Singing power ratio: quantitative evaluation of singing voice quality. Journal of Voice, 10(3). doi:10.1016/S0892-1997(96)80003-8',
+    url: 'https://doi.org/10.1016/S0892-1997(96)80003-8',
+    verified: 'partial',
+    note: '권·호·DOI·PMID 8865093 확인. 쪽수와 전체 저자 목록은 미확인.',
   },
   sundberg1974: {
     label: 'Sundberg (1974) — 가수 포먼트(2–4 kHz)',
-    cite: 'Sundberg, J. (1974). Articulatory interpretation of the "singing formant". JASA, 55(4), 838–844.',
+    cite: 'Sundberg, J. (1974). Articulatory interpretation of the "singing formant". Journal of the Acoustical Society of America, 55(4).',
+    verified: 'partial',
+    note: '논문과 내용(후두관 공명 모델)은 2차 문헌으로 확인. 쪽수 미확인. 모델 일부는 이후 반론이 있음 (Sundberg 1995 "The singer\'s formant revisited").',
   },
-  frokjaer1976: {
-    label: 'Frøkjær-Jensen & Prytz (1976) — Alpha ratio',
-    cite: 'Frøkjær-Jensen, B., & Prytz, S. (1976). Registration of voice quality. Brüel & Kjær Technical Review, 3, 3–17.',
+  frokjaer1975: {
+    label: 'Frøkjær-Jensen & Prytz (1975) — Alpha ratio',
+    cite: 'Frøkjær-Jensen, B., & Prytz, S. (1975). Registration of voice quality. Annual Report of the Institute of Phonetics, University of Copenhagen (ARIPUC), 9, 237–251.',
+    url: 'https://tidsskrift.dk/ARIPUC/article/view/130977',
+    verified: 'confirmed',
+    note: '원 논문은 1 kHz 위/아래 에너지 비로 정의. 이 앱의 50 Hz–1 kHz / 1–5 kHz 대역은 이후 LTAS 연구의 관례.',
   },
   titze2006: {
     label: 'Titze (2006) — 반폐쇄 성도(SOVT) 훈련',
     cite: 'Titze, I. R. (2006). Voice training and therapy with a semi-occluded vocal tract: rationale and scientific underpinnings. JSLHR, 49(2), 448–459.',
+    url: 'https://doi.org/10.1044/1092-4388(2006/035)',
+    verified: 'confirmed',
+    note: '컴퓨터 시뮬레이션 기반의 이론 논문. 효과 임상시험은 별도 (예: Kapsner-Smith et al. 2015).',
   },
   aaohns2018: {
     label: 'AAO-HNS (2018) 쉰 목소리 진료 가이드라인',
     cite: 'Stachler, R. J., et al. (2018). Clinical Practice Guideline: Hoarseness (Dysphonia) (Update). Otolaryngology–Head and Neck Surgery, 158(1_suppl), S1–S42.',
+    url: 'https://doi.org/10.1177/0194599817751030',
+    verified: 'confirmed',
+    note: '"4주 안에 호전되지 않으면 후두내시경" 권고 확인.',
   },
   rbj: {
     label: 'Audio EQ Cookbook (RBJ) — 필터 계수',
     cite: 'Bristow-Johnson, R. Audio EQ Cookbook. W3C Note.',
     url: 'https://www.w3.org/TR/audio-eq-cookbook/',
+    verified: 'confirmed',
+    note: '필터 공식은 단위 테스트로 수치 검증.',
   },
 };
 
@@ -69,8 +92,8 @@ export const EXERCISES = {
   twang: {
     name: '트왱 "냐-냐-냐"',
     how: '약간 짓궂은 아이 목소리처럼 밝게 "냐냐냐" → 같은 위치로 "냐—아—". 소리가 작아도 멀리 가는 느낌이 목표. 크게 지르지 말 것.',
-    why: '후두개 위쪽 통로(epilarynx)를 좁히면 2–4 kHz 에너지가 모인다는 것이 가수 포먼트의 대표적 설명이다.',
-    basis: 'research',
+    why: '후두개 위쪽 통로(epilarynx)를 좁히면 2–4 kHz 에너지가 모인다는 것이 가수 포먼트의 대표적 설명이다 (일부 반론 있음). 연습법 자체는 발성 교육의 경험칙.',
+    basis: 'heuristic',
     source: 'sundberg1974',
   },
   tongueForward: {

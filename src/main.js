@@ -131,13 +131,14 @@ function renderFinding(f) {
   if (f.provisional) tags.push('<span class="badge tag">기준값: 임시</span>');
   const ex = (f.exercises ?? []).map((id) => {
     const e = EXERCISES[id];
-    const src = e.source ? ` · ${esc(SOURCES[e.source].label)}` : '';
+    const src = e.source ? ` · ${e.basis === 'research' ? '' : '배경 이론: '}${esc(SOURCES[e.source].label)}` : '';
     const basis = e.basis === 'research' ? '연구 근거' : '경험칙';
     return `<div class="exercise"><b>${esc(e.name)} <span class="badge tag">${basis}${src}</span></b>${esc(e.how)}<div class="why">${esc(e.why)}</div></div>`;
   }).join('');
   const src = f.source ? SOURCES[f.source] : null;
   const cite = src
-    ? `<div class="cite" title="${esc(src.cite)}">근거: ${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.label)}</a>` : esc(src.label)}</div>`
+    ? `<div class="cite" title="${esc(src.cite)}">근거: ${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.label)}</a>` : esc(src.label)}${
+        src.verified === 'partial' ? ' (서지 일부 미확인)' : ''}</div>`
     : '';
   const eq = f.eq ? `<div class="cite">EQ 미리듣기: ${f.eq.freq} Hz ${f.eq.gain > 0 ? '+' : ''}${f.eq.gain} dB</div>` : '';
   return `<div class="finding ${f.severity}">

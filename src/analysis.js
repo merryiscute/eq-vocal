@@ -190,7 +190,7 @@ export function analyze(samples, sampleRate) {
     hnrDb: hnrs.length ? hnrs.reduce((a, b) => a + b, 0) / hnrs.length : null,
     // Singing Power Ratio (Omori et al. 1996): peak 2-4 kHz minus peak 0-2 kHz.
     sprDb: active && nyq > 4000 ? bandPeakDb(ltasDb, binHz, 2000, 4000) - bandPeakDb(ltasDb, binHz, 50, 2000) : null,
-    // Alpha ratio (Frokjaer-Jensen & Prytz 1976): energy 1-5 kHz vs 50 Hz-1 kHz.
+    // Alpha ratio (Frokjaer-Jensen & Prytz 1975, here with the later 50 Hz-1 kHz / 1-5 kHz convention).
     alphaDb: active ? db(pHigh) - db(pLow) : null,
     bandsDb: {
       low: db(bandPower(ltasPow, binHz, 80, 200)),

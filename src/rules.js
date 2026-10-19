@@ -121,7 +121,7 @@ export function diagnose(m, { pinch = null, t = THRESHOLDS } = {}) {
     id: 'tone', severity: tone, title: '음색 밝기',
     evidence: `Alpha ratio ${fmt(m.alphaDb)} dB`,
     meaning: toneMeaning, exercises: toneEx, eq: toneEq,
-    basis: 'research', source: 'frokjaer1976', provisional: t.alphaDb.provisional,
+    basis: 'research', source: 'frokjaer1975', provisional: t.alphaDb.provisional,
   });
 
   if (pinch != null) {

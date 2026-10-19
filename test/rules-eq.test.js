@@ -47,6 +47,13 @@ test('every referenced exercise and source exists', () => {
   for (const e of Object.values(EXERCISES)) if (e.source) assert.ok(SOURCES[e.source]);
 });
 
+test('every source carries a verification status', () => {
+  for (const [id, s] of Object.entries(SOURCES)) {
+    assert.ok(['confirmed', 'partial'].includes(s.verified), `${id}: ${s.verified}`);
+    if (s.verified === 'partial') assert.ok(s.note, `${id}: partial needs a note saying what is unconfirmed`);
+  }
+});
+
 test('suggested EQ: one move per band, from weak ring + dark tone', () => {
   const m = analyze(vowel({ f0: 220 }), SR);
   const r = diagnose({ ...m, sprDb: THRESHOLDS.sprDb.warn - 5, alphaDb: THRESHOLDS.alphaDb.dark - 5 });
